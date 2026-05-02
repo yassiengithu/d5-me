@@ -99,7 +99,11 @@ const ShippingCalculator = () => {
       const list: Rate[] = (data.rates ?? []).filter((r: Rate) => r.cost !== null);
       list.sort((a, b) => (a.cost ?? Infinity) - (b.cost ?? Infinity));
       setRates(list);
-      if (list.length > 0) setSelected(`${list[0].courier_name}-0`);
+      if (list.length > 0) {
+        const firstId = list[0].courier_id ?? `${list[0].courier_name}-0`;
+        setSelected(firstId);
+        saveSelectedCourier(firstId, list[0]);
+      }
       if (list.length === 0) toast.info("No couriers available for this route.");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Something went wrong";
