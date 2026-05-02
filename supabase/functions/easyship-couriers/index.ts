@@ -4,7 +4,7 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 const EASYSHIP_BASE_URL = "https://api.easyship.com";
 
 async function fetchCouriers(apiKey: string) {
-  const res = await fetch(`${EASYSHIP_BASE_URL}/2023-01/couriers`, {
+  const res = await fetch(`${EASYSHIP_BASE_URL}/2024-09/couriers`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${apiKey}`,
