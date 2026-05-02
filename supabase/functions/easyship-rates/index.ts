@@ -73,6 +73,7 @@ Deno.serve(async (req) => {
               declared_customs_value: p.declared_value,
               quantity: 1,
               description: "Merchandise",
+              category: "fashion",
             },
           ],
         },
