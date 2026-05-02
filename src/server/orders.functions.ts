@@ -11,6 +11,7 @@ const RecordOrderSchema = z.object({
   commission_amount: z.number().nonnegative(),
   seller_earnings: z.number().nonnegative(),
   payment_status: z.enum(["pending", "paid", "failed"]).default("pending"),
+  status: z.string().min(1).default("pending"),
   seller_id: z.string().uuid().nullable().optional(),
 });
 
@@ -37,7 +38,7 @@ export async function recordOrder(arg: Wrapped<RecordOrderInput>) {
     id: data.id,
     user_id: userId,
     seller_id: data.seller_id ?? null,
-    status: "pending",
+    status: data.status,
     payment_status: data.payment_status,
     total_amount: data.total_amount,
     commission_amount: data.commission_amount,
