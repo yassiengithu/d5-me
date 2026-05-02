@@ -271,6 +271,11 @@ const Checkout = () => {
     const timePart = Date.now().toString(36).toUpperCase().slice(-6);
     const randPart = Math.random().toString(36).toUpperCase().slice(2, 6).padEnd(4, "X");
     const orderId = `SH-${timePart}-${randPart}`;
+    // DB row uses a UUID; PayMongo metadata.order_id references this UUID so the
+    // webhook can find the order to mark paid.
+    const dbOrderId = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const paymentStatus: PaymentStatus = "unpaid";
     const snapshot = {
       orderId,
