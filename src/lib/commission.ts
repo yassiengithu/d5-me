@@ -1,4 +1,4 @@
-const PLATFORM_COMMISSION_RATE = 0.08;
+const PLATFORM_COMMISSION_RATE = 0.05;
 
 export const calculatePlatformFee = (subtotal: number) => Math.round(subtotal * PLATFORM_COMMISSION_RATE);
 
