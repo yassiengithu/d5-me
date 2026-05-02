@@ -43,7 +43,7 @@ const ShippingCalculator = () => {
   });
   const [loading, setLoading] = useState(false);
   const [rates, setRates] = useState<Rate[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(() => getSelectedCourier()?.id ?? null);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (key: keyof typeof form, value: string) =>
