@@ -263,59 +263,14 @@ const ShippingCalculator = () => {
             <h2 className="text-sm font-semibold text-muted-foreground">
               {rates.length} courier option{rates.length === 1 ? "" : "s"}
             </h2>
-            <RadioGroup value={selected ?? ""} onValueChange={setSelected} className="space-y-2">
-              {rates.map((r, idx) => {
-                const id = `${r.courier_name}-${idx}`;
-                const isSelected = selected === id;
-                const eta =
-                  r.min_days && r.max_days
-                    ? r.min_days === r.max_days
-                      ? `${r.min_days} day${r.min_days === 1 ? "" : "s"}`
-                      : `${r.min_days}–${r.max_days} days`
-                    : "—";
-                return (
-                  <Label
-                    key={id}
-                    htmlFor={id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
-                      isSelected
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:bg-muted/40"
-                    }`}
-                  >
-                    <RadioGroupItem id={id} value={id} />
-                    {r.logo_url ? (
-                      <img
-                        src={r.logo_url}
-                        alt={r.courier_name}
-                        className="h-8 w-8 shrink-0 rounded object-contain"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-muted">
-                        <Truck className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium">{r.courier_name}</span>
-                        {idx === 0 && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            Cheapest
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-xs text-muted-foreground">ETA: {eta}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-semibold">
-                        {r.cost !== null ? formatMoney(r.cost, r.currency) : "—"}
-                      </div>
-                    </div>
-                  </Label>
-                );
-              })}
-            </RadioGroup>
+            <CourierSelector
+              rates={rates}
+              value={selected}
+              onChange={(id, rate) => {
+                setSelected(id);
+                saveSelectedCourier(id, rate);
+              }}
+            />
 
             {selected && (
               <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 p-3 text-sm text-success">
@@ -323,7 +278,11 @@ const ShippingCalculator = () => {
                 <span>
                   Selected:{" "}
                   <strong>
-                    {rates.find((_, i) => `${rates[i].courier_name}-${i}` === selected)?.courier_name}
+                    {
+                      rates.find(
+                        (r, i) => (r.courier_id ?? `${r.courier_name}-${i}`) === selected,
+                      )?.courier_name
+                    }
                   </strong>
                 </span>
               </div>
