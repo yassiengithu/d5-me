@@ -71,6 +71,7 @@ const AppRoutes = () => (
       <Route path="/admin" element={<Admin />} />
       <Route path="/admin-dashboard" element={<AdminDashboard />} />
       <Route path="/seller-dashboard" element={<SellerDashboard />} />
+      <Route path="/shipping-calculator" element={<ShippingCalculator />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </Suspense>
