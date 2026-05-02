@@ -262,15 +262,15 @@ const Checkout = () => {
 
   const handleConfirmOrder = () => {
     setReviewOpen(false);
-    finalizeOrder();
+    void finalizeOrder();
   };
 
-  const finalizeOrder = () => {
+  const finalizeOrder = async () => {
+    setProcessing(true);
     const placedAt = new Date();
     const timePart = Date.now().toString(36).toUpperCase().slice(-6);
     const randPart = Math.random().toString(36).toUpperCase().slice(2, 6).padEnd(4, "X");
     const orderId = `SH-${timePart}-${randPart}`;
-    // COD = unpaid (pay on delivery). GCash/Card = unpaid until proof received.
     const paymentStatus: PaymentStatus = "unpaid";
     const snapshot = {
       orderId,
@@ -285,7 +285,6 @@ const Checkout = () => {
       courier: selectedCourier,
       payment: { ...selectedPayment, status: paymentStatus },
     };
-    setPlacedOrder(snapshot);
     const courierPrefix = selectedCourier.id.slice(0, 3).toUpperCase();
     const trackingNumber = `${courierPrefix}${Math.floor(100000000 + Math.random() * 900000000)}PH`;
     addOrder({
@@ -315,24 +314,66 @@ const Checkout = () => {
     saveContact({ name, phone, address });
     try { localStorage.setItem("shop:lastPaymentMethod", selectedPayment.id); } catch { /* ignore */ }
     trackProductPurchases(items.map(({ product: p, qty }) => ({ id: p.id, qty })));
-    // Persist the order with monetary breakdown to the database.
-    // Map local PaymentStatus -> DB payment_status enum.
-    // At placement: unpaid/under_review -> 'pending'. Later, payment confirmation
-    // flips this to 'paid' via updateOrderPaymentStatus.
+
+    // Persist the order. For online payments use 'pending_payment'; COD stays 'pending'.
+    const isOnline = selectedPayment.id === "gcash" || selectedPayment.id === "card";
     const dbPaymentStatus: "pending" | "paid" | "failed" = "pending";
     const commission = calculatePlatformFee(totalPrice);
     const sellerEarnings = Math.max(0, grandTotal - commission);
-    void recordOrder({
-      data: {
-        id: orderId,
-        total_amount: grandTotal,
-        commission_amount: commission,
-        seller_earnings: sellerEarnings,
-        payment_status: dbPaymentStatus,
-      },
-    }).catch((err) => console.warn("recordOrder failed", err));
+    try {
+      await recordOrder({
+        data: {
+          id: orderId,
+          total_amount: grandTotal,
+          commission_amount: commission,
+          seller_earnings: sellerEarnings,
+          payment_status: dbPaymentStatus,
+          status: isOnline ? "pending_payment" : "pending",
+        },
+      });
+    } catch (err) {
+      console.warn("recordOrder failed", err);
+    }
+
+    // Online payment → create PayMongo Checkout Session and redirect.
+    if (isOnline) {
+      try {
+        const { createPayMongoCheckout } = await import("@/lib/paymongo");
+        const origin = window.location.origin;
+        const session = await createPayMongoCheckout({
+          lineItems: [
+            ...items.map(({ product: p, qty }) => ({
+              name: p.name,
+              quantity: qty,
+              amount: p.price,
+            })),
+            ...(shippingFee > 0
+              ? [{ name: `Shipping (${selectedCourier.name})`, quantity: 1, amount: shippingFee }]
+              : []),
+          ],
+          successUrl: `${origin}/orders/${orderId}?payment=success`,
+          cancelUrl: `${origin}/orders/${orderId}?payment=cancelled`,
+          referenceNumber: orderId,
+          description: `Order ${orderId}`,
+          customerEmail: user?.email,
+        });
+        setPlacedOrder(snapshot);
+        clearCart();
+        window.location.href = session.checkout_url;
+        return;
+      } catch (err: any) {
+        console.error("PayMongo checkout error", err);
+        toast.error(err?.message ?? "Could not start payment. Please try again.");
+        setProcessing(false);
+        return;
+      }
+    }
+
+    // COD path
+    setPlacedOrder(snapshot);
     setConfirmed(true);
     clearCart();
+    setProcessing(false);
   };
 
   if (confirmed && placedOrder) {
