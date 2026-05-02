@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import PageHeader from "@/components/PageHeader";
 import BottomNav from "@/components/BottomNav";
 import CourierSelector, { type CourierRate } from "@/components/CourierSelector";
+import CreateShipmentPanel from "@/components/CreateShipmentPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { saveSelectedCourier, getSelectedCourier } from "@/lib/orderShipping";
 import { toast } from "sonner";
