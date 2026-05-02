@@ -248,6 +248,66 @@ export type Database = {
         }
         Relationships: []
       }
+      shipments: {
+        Row: {
+          cost: number | null
+          courier_id: string | null
+          courier_name: string | null
+          created_at: string
+          currency: string | null
+          easyship_shipment_id: string | null
+          id: string
+          label_url: string | null
+          order_id: string | null
+          parcel: Json
+          raw_response: Json | null
+          receiver: Json
+          sender: Json
+          status: string
+          tracking_number: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number | null
+          courier_id?: string | null
+          courier_name?: string | null
+          created_at?: string
+          currency?: string | null
+          easyship_shipment_id?: string | null
+          id?: string
+          label_url?: string | null
+          order_id?: string | null
+          parcel: Json
+          raw_response?: Json | null
+          receiver: Json
+          sender: Json
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number | null
+          courier_id?: string | null
+          courier_name?: string | null
+          created_at?: string
+          currency?: string | null
+          easyship_shipment_id?: string | null
+          id?: string
+          label_url?: string | null
+          order_id?: string | null
+          parcel?: Json
+          raw_response?: Json | null
+          receiver?: Json
+          sender?: Json
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
