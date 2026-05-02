@@ -17,6 +17,7 @@ const BodySchema = z.object({
   description: z.string().max(500).optional(),
   reference_number: z.string().max(255).optional(),
   customer_email: z.string().email().optional(),
+  order_id: z.string().uuid().optional(),
 });
 
 Deno.serve(async (req) => {
