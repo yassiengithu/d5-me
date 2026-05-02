@@ -92,11 +92,21 @@ Deno.serve(async (req) => {
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok) {
+      const detailMsgs: string[] = data?.error?.details ?? [];
+      const noSolutions = detailMsgs.some((d) =>
+        d.toLowerCase().includes("no shipping solutions"),
+      );
+      if (noSolutions) {
+        return new Response(
+          JSON.stringify({ success: true, count: 0, rates: [] }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
       console.error("Easyship rates error:", res.status, data);
       return new Response(
         JSON.stringify({
           success: false,
-          error: `Easyship API error [${res.status}]`,
+          error: data?.error?.message ?? `Easyship API error [${res.status}]`,
           details: data,
         }),
         { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
