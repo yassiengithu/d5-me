@@ -116,6 +116,27 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_earnings: {
+        Row: {
+          available_balance: number
+          id: boolean
+          total_commission_earned: number
+          updated_at: string
+        }
+        Insert: {
+          available_balance?: number
+          id?: boolean
+          total_commission_earned?: number
+          updated_at?: string
+        }
+        Update: {
+          available_balance?: number
+          id?: boolean
+          total_commission_earned?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       product_purchases: {
         Row: {
           buyer_id: string | null
