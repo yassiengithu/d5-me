@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { Truck, CheckCircle, Clock, MapPin, Phone, User, Package, Receipt, Copy, BadgeCheck, AlertCircle, Loader2, Wallet, Smartphone, CreditCard, ShieldCheck, RotateCcw, ExternalLink, Navigation, Route, MousePointerClick, ArrowLeftRight, Info, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -139,6 +139,7 @@ const getCourierTrackingUrl = (courierId: string, trackingNumber: string) => {
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     orders,
     updateOrderStatus,
@@ -154,6 +155,40 @@ const OrderDetail = () => {
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingError, setTrackingError] = useState("");
   const [payingNow, setPayingNow] = useState(false);
+  const [returnBanner, setReturnBanner] = useState<"success" | "cancelled" | null>(null);
+
+  // Handle return from PayMongo Checkout. Show a confirmation banner + toast,
+  // optimistically flip payment status, and strip the query param.
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (payment !== "success" && payment !== "cancelled") return;
+    if (!order) return;
+
+    if (payment === "success") {
+      setReturnBanner("success");
+      if (order.payment?.status !== "paid") {
+        // Optimistic — webhook will reconcile authoritatively
+        updatePaymentStatus(order.id, "under_review");
+      }
+      toast.success("Thanks! We received your payment", {
+        id: `payment-return-${order.id}`,
+        description: "We're confirming it now — you'll see the update here shortly.",
+      });
+    } else {
+      setReturnBanner("cancelled");
+      toast.info("Payment cancelled", {
+        id: `payment-return-${order.id}`,
+        description: "Your order is still reserved. You can try paying again anytime.",
+      });
+    }
+
+    // Strip the query param so reloading the page doesn't re-fire.
+    const next = new URLSearchParams(searchParams);
+    next.delete("payment");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id]);
+
 
   useEffect(() => {
     setTrackingInput(order?.trackingNumber ?? "");
@@ -305,6 +340,64 @@ const OrderDetail = () => {
       />
 
       <div className="px-4 pt-4 space-y-4">
+        {/* Return-from-PayMongo banner */}
+        {returnBanner === "success" && (
+          <div
+            role="status"
+            className="rounded-2xl border-2 border-success/40 bg-success/10 p-4 flex items-start gap-3 animate-fade-in"
+          >
+            <div className="h-10 w-10 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+              <CheckCircle className="h-5 w-5 text-success" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-success leading-tight">
+                Payment received — thank you!
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                We're confirming it with the payment processor. Your order will move to{" "}
+                <span className="font-bold text-foreground">Paid</span> as soon as it clears
+                (usually a few seconds).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReturnBanner(null)}
+              aria-label="Dismiss"
+              className="p-1 -m-1 rounded-md text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {returnBanner === "cancelled" && (
+          <div
+            role="status"
+            className="rounded-2xl border-2 border-warning/40 bg-warning/10 p-4 flex items-start gap-3 animate-fade-in"
+          >
+            <div className="h-10 w-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-5 w-5 text-warning" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-warning-foreground leading-tight">
+                Payment cancelled
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                No worries — your order is still reserved. Tap{" "}
+                <span className="font-bold text-foreground">Pay Now</span> below whenever you're
+                ready.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReturnBanner(null)}
+              aria-label="Dismiss"
+              className="p-1 -m-1 rounded-md text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Status hero + progress */}
         <Card className={`p-4 space-y-4 border ${statusVisual.surface}`}>
           <div className="flex items-start gap-3">
