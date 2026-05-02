@@ -340,6 +340,64 @@ const OrderDetail = () => {
       />
 
       <div className="px-4 pt-4 space-y-4">
+        {/* Return-from-PayMongo banner */}
+        {returnBanner === "success" && (
+          <div
+            role="status"
+            className="rounded-2xl border-2 border-success/40 bg-success/10 p-4 flex items-start gap-3 animate-fade-in"
+          >
+            <div className="h-10 w-10 rounded-full bg-success/20 flex items-center justify-center shrink-0">
+              <CheckCircle className="h-5 w-5 text-success" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-success leading-tight">
+                Payment received — thank you!
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                We're confirming it with the payment processor. Your order will move to{" "}
+                <span className="font-bold text-foreground">Paid</span> as soon as it clears
+                (usually a few seconds).
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReturnBanner(null)}
+              aria-label="Dismiss"
+              className="p-1 -m-1 rounded-md text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+        {returnBanner === "cancelled" && (
+          <div
+            role="status"
+            className="rounded-2xl border-2 border-warning/40 bg-warning/10 p-4 flex items-start gap-3 animate-fade-in"
+          >
+            <div className="h-10 w-10 rounded-full bg-warning/20 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-5 w-5 text-warning" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-extrabold text-warning-foreground leading-tight">
+                Payment cancelled
+              </p>
+              <p className="text-[11px] text-muted-foreground leading-snug mt-1">
+                No worries — your order is still reserved. Tap{" "}
+                <span className="font-bold text-foreground">Pay Now</span> below whenever you're
+                ready.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setReturnBanner(null)}
+              aria-label="Dismiss"
+              className="p-1 -m-1 rounded-md text-muted-foreground hover:text-foreground shrink-0"
+            >
+              <XCircle className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         {/* Status hero + progress */}
         <Card className={`p-4 space-y-4 border ${statusVisual.surface}`}>
           <div className="flex items-start gap-3">
