@@ -31,6 +31,16 @@ async function verifySignature(
   return expected === provided;
 }
 
+// Extract order_id from any nested metadata location PayMongo may use.
+function extractOrderId(resourceData: any): string | null {
+  return (
+    resourceData?.attributes?.metadata?.order_id ??
+    resourceData?.attributes?.payment_intent?.attributes?.metadata?.order_id ??
+    resourceData?.attributes?.data?.attributes?.metadata?.order_id ??
+    null
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") {
@@ -65,25 +75,54 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    if (type === "source.chargeable" && sourceId) {
-      // In a full impl you'd create a payment from the source here.
-      console.log("Source chargeable:", sourceId);
-    } else if (type === "payment.paid") {
-      const orderId = resourceData?.attributes?.metadata?.order_id;
-      if (orderId) {
-        await supabase
+    if (type === "checkout_session.payment.paid" || type === "payment.paid") {
+      const orderId = extractOrderId(resourceData);
+      if (!orderId) {
+        console.warn(`[${type}] missing order_id in metadata`);
+      } else {
+        // Idempotency: only update if not already paid.
+        const { data: existing, error: fetchErr } = await supabase
           .from("orders")
-          .update({ payment_status: "paid" })
-          .eq("id", orderId);
+          .select("id, payment_status, status")
+          .eq("id", orderId)
+          .maybeSingle();
+
+        if (fetchErr) {
+          console.error("fetch order error:", fetchErr);
+        } else if (!existing) {
+          console.warn(`order ${orderId} not found`);
+        } else if (existing.payment_status === "paid") {
+          console.log(`order ${orderId} already paid - skipping`);
+        } else {
+          // Setting status='completed' fires triggers:
+          //   calculate_order_commission -> commission/earnings amounts
+          //   apply_seller_totals_on_completion -> seller aggregates
+          const { error: updErr } = await supabase
+            .from("orders")
+            .update({ payment_status: "paid", status: "completed" })
+            .eq("id", orderId)
+            .neq("payment_status", "paid"); // extra guard against races
+
+          if (updErr) {
+            console.error("update order error:", updErr);
+          } else {
+            console.log(`order ${orderId} marked paid + completed`);
+          }
+        }
       }
-    } else if (type === "payment.failed") {
-      const orderId = resourceData?.attributes?.metadata?.order_id;
+    } else if (type === "payment.failed" || type === "checkout_session.payment.failed") {
+      const orderId = extractOrderId(resourceData);
       if (orderId) {
         await supabase
           .from("orders")
           .update({ payment_status: "failed" })
-          .eq("id", orderId);
+          .eq("id", orderId)
+          .neq("payment_status", "paid"); // never overwrite a paid order
       }
+    } else if (type === "source.chargeable" && sourceId) {
+      console.log("Source chargeable:", sourceId);
+    } else {
+      console.log("Unhandled PayMongo event type:", type);
     }
   } catch (err) {
     console.error("webhook handler error:", err);
