@@ -191,30 +191,39 @@ export type Database = {
           display_name: string | null
           id: string
           net_earnings: number
+          pending_balance: number
           total_commission_paid: number
+          total_earnings: number
           total_sales: number
           updated_at: string
           user_id: string
+          wallet_balance: number
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           id?: string
           net_earnings?: number
+          pending_balance?: number
           total_commission_paid?: number
+          total_earnings?: number
           total_sales?: number
           updated_at?: string
           user_id: string
+          wallet_balance?: number
         }
         Update: {
           created_at?: string
           display_name?: string | null
           id?: string
           net_earnings?: number
+          pending_balance?: number
           total_commission_paid?: number
+          total_earnings?: number
           total_sales?: number
           updated_at?: string
           user_id?: string
+          wallet_balance?: number
         }
         Relationships: []
       }
