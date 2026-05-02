@@ -139,6 +139,7 @@ const getCourierTrackingUrl = (courierId: string, trackingNumber: string) => {
 
 const OrderDetail = () => {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     orders,
     updateOrderStatus,
@@ -154,6 +155,40 @@ const OrderDetail = () => {
   const [trackingInput, setTrackingInput] = useState("");
   const [trackingError, setTrackingError] = useState("");
   const [payingNow, setPayingNow] = useState(false);
+  const [returnBanner, setReturnBanner] = useState<"success" | "cancelled" | null>(null);
+
+  // Handle return from PayMongo Checkout. Show a confirmation banner + toast,
+  // optimistically flip payment status, and strip the query param.
+  useEffect(() => {
+    const payment = searchParams.get("payment");
+    if (payment !== "success" && payment !== "cancelled") return;
+    if (!order) return;
+
+    if (payment === "success") {
+      setReturnBanner("success");
+      if (order.payment?.status !== "paid") {
+        // Optimistic — webhook will reconcile authoritatively
+        updatePaymentStatus(order.id, "under_review");
+      }
+      toast.success("Thanks! We received your payment", {
+        id: `payment-return-${order.id}`,
+        description: "We're confirming it now — you'll see the update here shortly.",
+      });
+    } else {
+      setReturnBanner("cancelled");
+      toast.info("Payment cancelled", {
+        id: `payment-return-${order.id}`,
+        description: "Your order is still reserved. You can try paying again anytime.",
+      });
+    }
+
+    // Strip the query param so reloading the page doesn't re-fire.
+    const next = new URLSearchParams(searchParams);
+    next.delete("payment");
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [order?.id]);
+
 
   useEffect(() => {
     setTrackingInput(order?.trackingNumber ?? "");
