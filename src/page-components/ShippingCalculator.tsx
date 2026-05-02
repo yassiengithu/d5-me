@@ -5,22 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Badge } from "@/components/ui/badge";
 import PageHeader from "@/components/PageHeader";
 import BottomNav from "@/components/BottomNav";
+import CourierSelector, { type CourierRate } from "@/components/CourierSelector";
 import { supabase } from "@/integrations/supabase/client";
+import { saveSelectedCourier, getSelectedCourier } from "@/lib/orderShipping";
 import { toast } from "sonner";
 
-type Rate = {
-  courier_id: string | null;
-  courier_name: string;
-  logo_url: string | null;
-  cost: number | null;
-  currency: string;
-  min_days: number | null;
-  max_days: number | null;
-};
+type Rate = CourierRate;
 
 const FormSchema = z.object({
   origin_city: z.string().trim().min(1, "Required").max(120),
