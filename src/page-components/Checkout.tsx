@@ -361,6 +361,7 @@ const Checkout = () => {
           referenceNumber: orderId,
           description: `Order ${orderId}`,
           customerEmail: user?.email,
+          orderId: dbOrderId,
         });
         setPlacedOrder(snapshot);
         clearCart();
