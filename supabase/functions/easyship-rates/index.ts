@@ -58,7 +58,6 @@ Deno.serve(async (req) => {
       origin_address: p.origin,
       destination_address: p.destination,
       incoterms: "DDU",
-      output_currency: p.currency,
       parcels: [
         {
           total_actual_weight: p.weight_kg,
