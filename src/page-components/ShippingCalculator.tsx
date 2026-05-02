@@ -291,7 +291,34 @@ const ShippingCalculator = () => {
           </section>
         )}
 
-        {rates && rates.length === 0 && (
+        {rates && rates.length > 0 && selected && (() => {
+          const rate = rates.find(
+            (r, i) => (r.courier_id ?? `${r.courier_name}-${i}`) === selected,
+          );
+          if (!rate) return null;
+          return (
+            <CreateShipmentPanel
+              courierId={rate.courier_id}
+              courierName={rate.courier_name}
+              parcel={{
+                weight_kg: Number(form.weight_kg),
+                length_cm: Number(form.length_cm),
+                width_cm: Number(form.width_cm),
+                height_cm: Number(form.height_cm),
+              }}
+              origin={{
+                country_alpha2: "PH",
+                city: form.origin_city,
+                postal_code: form.origin_postal,
+              }}
+              destination={{
+                country_alpha2: form.dest_country.toUpperCase(),
+                city: form.dest_city,
+                postal_code: form.dest_postal,
+              }}
+            />
+          );
+        })()}
           <Card className="p-5 text-center text-sm text-muted-foreground">
             No couriers available for this route. Try different details.
           </Card>
