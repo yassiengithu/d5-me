@@ -323,8 +323,11 @@ const Checkout = () => {
     // Persist the order. For online payments use 'pending_payment'; COD stays 'pending'.
     const isOnline = selectedPayment.id === "gcash" || selectedPayment.id === "card";
     const dbPaymentStatus: "pending" | "paid" | "failed" = "pending";
-    const commission = calculatePlatformFee(totalPrice);
-    const sellerEarnings = Math.max(0, grandTotal - commission);
+    // Commission is computed from grand total to match the DB trigger
+    // (calculate_order_commission uses total_amount). The trigger recomputes
+    // these on status='completed', so this is mainly for the initial pending row.
+    const commission = calculatePlatformFee(grandTotal);
+    const sellerEarnings = Math.max(0, Math.round((grandTotal - commission) * 100) / 100);
     try {
       await recordOrder({
         data: {
