@@ -271,6 +271,11 @@ const Checkout = () => {
     const timePart = Date.now().toString(36).toUpperCase().slice(-6);
     const randPart = Math.random().toString(36).toUpperCase().slice(2, 6).padEnd(4, "X");
     const orderId = `SH-${timePart}-${randPart}`;
+    // DB row uses a UUID; PayMongo metadata.order_id references this UUID so the
+    // webhook can find the order to mark paid.
+    const dbOrderId = (typeof crypto !== "undefined" && "randomUUID" in crypto)
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const paymentStatus: PaymentStatus = "unpaid";
     const snapshot = {
       orderId,
@@ -318,12 +323,15 @@ const Checkout = () => {
     // Persist the order. For online payments use 'pending_payment'; COD stays 'pending'.
     const isOnline = selectedPayment.id === "gcash" || selectedPayment.id === "card";
     const dbPaymentStatus: "pending" | "paid" | "failed" = "pending";
-    const commission = calculatePlatformFee(totalPrice);
-    const sellerEarnings = Math.max(0, grandTotal - commission);
+    // Commission is computed from grand total to match the DB trigger
+    // (calculate_order_commission uses total_amount). The trigger recomputes
+    // these on status='completed', so this is mainly for the initial pending row.
+    const commission = calculatePlatformFee(grandTotal);
+    const sellerEarnings = Math.max(0, Math.round((grandTotal - commission) * 100) / 100);
     try {
       await recordOrder({
         data: {
-          id: orderId,
+          id: dbOrderId,
           total_amount: grandTotal,
           commission_amount: commission,
           seller_earnings: sellerEarnings,
@@ -356,6 +364,7 @@ const Checkout = () => {
           referenceNumber: orderId,
           description: `Order ${orderId}`,
           customerEmail: user?.email,
+          orderId: dbOrderId,
         });
         setPlacedOrder(snapshot);
         clearCart();

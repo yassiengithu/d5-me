@@ -56,6 +56,7 @@ export interface CreateCheckoutInput {
   description?: string;
   referenceNumber?: string;
   customerEmail?: string;
+  orderId?: string;
 }
 
 export interface PayMongoCheckoutSession {
@@ -77,7 +78,7 @@ export async function createPayMongoCheckout(
       line_items: input.lineItems.map((li) => ({
         name: li.name,
         quantity: li.quantity,
-        amount: li.amount, // PHP; edge function converts to centavos
+        amount: li.amount,
         currency: li.currency ?? "PHP",
         description: li.description,
       })),
@@ -86,6 +87,7 @@ export async function createPayMongoCheckout(
       description: input.description,
       reference_number: input.referenceNumber,
       customer_email: input.customerEmail,
+      order_id: input.orderId,
     },
   });
   if (error) throw new Error(error.message);

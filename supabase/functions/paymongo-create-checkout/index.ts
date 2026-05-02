@@ -17,6 +17,7 @@ const BodySchema = z.object({
   description: z.string().max(500).optional(),
   reference_number: z.string().max(255).optional(),
   customer_email: z.string().email().optional(),
+  order_id: z.string().uuid().optional(),
 });
 
 Deno.serve(async (req) => {
@@ -42,7 +43,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { line_items, success_url, cancel_url, description, reference_number, customer_email } = parsed.data;
+    const { line_items, success_url, cancel_url, description, reference_number, customer_email, order_id } = parsed.data;
 
     // Convert PHP -> centavos (PayMongo requires integer minor units).
     const items = line_items.map((li) => ({
@@ -71,6 +72,7 @@ Deno.serve(async (req) => {
             ...(description ? { description } : {}),
             ...(reference_number ? { reference_number } : {}),
             ...(customer_email ? { billing: { email: customer_email } } : {}),
+            ...(order_id ? { metadata: { order_id } } : {}),
           },
         },
       }),
