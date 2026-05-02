@@ -3,7 +3,7 @@ import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.95.0/cors";
 import { z } from "https://esm.sh/zod@3.23.8";
 
 const EASYSHIP_BASE_URL = "https://api.easyship.com";
-// Note: account token is issued for 2024-09+; older /2023-01 path returns 403.
+// Account token is issued for 2024-09+; older /2023-01 returns 403.
 const RATES_PATH = "/2024-09/rates";
 
 const AddressSchema = z.object({
@@ -57,6 +57,8 @@ Deno.serve(async (req) => {
     const payload = {
       origin_address: p.origin,
       destination_address: p.destination,
+      incoterms: "DDU",
+      output_currency: p.currency,
       parcels: [
         {
           total_actual_weight: p.weight_kg,
@@ -76,18 +78,6 @@ Deno.serve(async (req) => {
           ],
         },
       ],
-ate:    incoterms: "DDU",
-      output_currency: p.currency,
-    };
-    // Fix typo above
-    // (kept literal here for clarity; replaced below)
-
-    const cleanPayload = {
-      origin_address: p.origin,
-      destination_address: p.destination,
-      parcels: payload.parcels,
-      incoterms: "DDU",
-      output_currency: p.currency,
     };
 
     const res = await fetch(`${EASYSHIP_BASE_URL}${RATES_PATH}`, {
@@ -97,7 +87,7 @@ ate:    incoterms: "DDU",
         Accept: "application/json",
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(cleanPayload),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json().catch(() => ({}));
