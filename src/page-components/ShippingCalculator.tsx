@@ -319,6 +319,8 @@ const ShippingCalculator = () => {
             />
           );
         })()}
+
+        {rates && rates.length === 0 && (
           <Card className="p-5 text-center text-sm text-muted-foreground">
             No couriers available for this route. Try different details.
           </Card>
