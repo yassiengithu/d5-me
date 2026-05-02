@@ -39,6 +39,7 @@ const Notifications = lazy(() => import("@/page-components/Notifications"));
 const Admin = lazy(() => import("@/page-components/Admin"));
 const AdminDashboard = lazy(() => import("@/page-components/AdminDashboard"));
 const SellerDashboard = lazy(() => import("@/page-components/SellerDashboard"));
+const ShippingCalculator = lazy(() => import("@/page-components/ShippingCalculator"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
