@@ -328,7 +328,7 @@ const Checkout = () => {
     try {
       await recordOrder({
         data: {
-          id: orderId,
+          id: dbOrderId,
           total_amount: grandTotal,
           commission_amount: commission,
           seller_earnings: sellerEarnings,
