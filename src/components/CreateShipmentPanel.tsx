@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import DownloadLabelButton from "@/components/DownloadLabelButton";
 import { toast } from "sonner";
 
 interface CreateShipmentPanelProps {
@@ -231,22 +232,20 @@ const CreateShipmentPanel = ({
                 {result.tracking_number ?? "—"}
               </div>
             </div>
-            <div>
+            <div className="space-y-2 pt-1">
               <Label className="text-xs text-muted-foreground">Label</Label>
-              <div className="text-xs">
-                {result.label_url ? (
-                  <a
-                    href={result.label_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary underline break-all"
-                  >
-                    Download label
-                  </a>
-                ) : (
-                  "Pending — generated after courier acceptance"
-                )}
-              </div>
+              {result.label_url ? (
+                <DownloadLabelButton
+                  labelUrl={result.label_url}
+                  filenameHint={
+                    result.tracking_number ?? result.easyship_shipment_id ?? "shipping-label"
+                  }
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Pending — generated after courier acceptance.
+                </p>
+              )}
             </div>
           </div>
         </div>
