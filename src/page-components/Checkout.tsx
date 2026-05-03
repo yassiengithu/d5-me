@@ -483,6 +483,8 @@ const Checkout = () => {
     setConfirmed(true);
     clearCart();
     setProcessing(false);
+    // Fire-and-forget shipment creation when a live courier was picked.
+    void tryCreateShipment(orderId, dbOrderId);
   };
 
   if (confirmed && placedOrder) {
