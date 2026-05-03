@@ -98,6 +98,7 @@ export interface PlacedOrder {
     etaMaxDays: number;
   };
   payment?: PaymentMethodInfo;
+  shipment?: ShipmentInfo;
 }
 
 interface OrdersContextType {
@@ -106,6 +107,7 @@ interface OrdersContextType {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updatePaymentStatus: (orderId: string, status: PaymentStatus) => void;
   updateTrackingNumber: (orderId: string, trackingNumber: string) => void;
+  attachShipment: (orderId: string, shipment: ShipmentInfo) => void;
   /**
    * Attach (or replace) the provider-generated payment URL for an order.
    * Called after `paymentGateway.createPaymentUrl()` resolves.
