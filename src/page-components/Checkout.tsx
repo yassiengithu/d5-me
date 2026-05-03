@@ -110,6 +110,17 @@ const Checkout = () => {
   const [phone, setPhone] = useState(() => loadSavedContact().phone);
   const [address, setAddress] = useState(() => loadSavedContact().address);
   const [courierId, setCourierId] = useState<CourierId>("jnt");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  // Live Easyship rates (optional)
+  const [liveRates, setLiveRates] = useState<CourierRate[] | null>(null);
+  const [selectedLiveId, setSelectedLiveId] = useState<string | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState<string | null>(null);
+  const selectedLiveRate =
+    liveRates?.find(
+      (r, i) => (r.courier_id ?? `${r.courier_name}-${i}`) === selectedLiveId,
+    ) ?? null;
   const [paymentId, setPaymentId] = useState<PaymentMethodId>(() => {
     try {
       const saved = localStorage.getItem("shop:lastPaymentMethod") as PaymentMethodId | null;
