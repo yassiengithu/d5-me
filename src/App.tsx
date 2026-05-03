@@ -40,6 +40,7 @@ const Admin = lazy(() => import("@/page-components/Admin"));
 const AdminDashboard = lazy(() => import("@/page-components/AdminDashboard"));
 const SellerDashboard = lazy(() => import("@/page-components/SellerDashboard"));
 const ShippingCalculator = lazy(() => import("@/page-components/ShippingCalculator"));
+const TrackShipment = lazy(() => import("@/page-components/TrackShipment"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -72,6 +73,8 @@ const AppRoutes = () => (
       <Route path="/admin-dashboard" element={<AdminDashboard />} />
       <Route path="/seller-dashboard" element={<SellerDashboard />} />
       <Route path="/shipping-calculator" element={<ShippingCalculator />} />
+      <Route path="/track" element={<TrackShipment />} />
+      <Route path="/track/:trackingNumber" element={<TrackShipment />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   </Suspense>
