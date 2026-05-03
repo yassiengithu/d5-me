@@ -244,7 +244,21 @@ const Checkout = () => {
     ? savedAddresses.find((a) => a.id === selectedAddressId) ?? null
     : null;
 
-  const selectedCourier = COURIERS.find((c) => c.id === courierId) ?? COURIERS[0];
+  const baseCourier = COURIERS.find((c) => c.id === courierId) ?? COURIERS[0];
+  // When a live Easyship rate is picked, it takes precedence over the static list.
+  const selectedCourier: Courier = selectedLiveRate
+    ? {
+        id: courierId, // keep enum id for legacy tracking-url helper
+        name: selectedLiveRate.courier_name,
+        fee: Math.round(selectedLiveRate.cost ?? baseCourier.fee),
+        etaDays:
+          selectedLiveRate.min_days && selectedLiveRate.max_days
+            ? `${selectedLiveRate.min_days}–${selectedLiveRate.max_days} days`
+            : baseCourier.etaDays,
+        etaMaxDays: selectedLiveRate.max_days ?? baseCourier.etaMaxDays,
+        badge: "Live",
+      }
+    : baseCourier;
   const selectedPayment = PAYMENT_METHODS.find((p) => p.id === paymentId) ?? PAYMENT_METHODS[0];
   const shippingFee = selectedCourier.fee;
   const grandTotal = totalPrice + shippingFee;
