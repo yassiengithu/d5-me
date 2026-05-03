@@ -102,7 +102,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, totalItems, clearCart } = useCart();
-  const { addOrder, updatePaymentStatus } = useOrders();
+  const { addOrder, updatePaymentStatus, attachShipment, updateOrderStatus } = useOrders();
   const [confirmed, setConfirmed] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
