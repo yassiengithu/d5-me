@@ -2,9 +2,33 @@ import { createContext, useContext, useEffect, useMemo, useState, ReactNode } fr
 import type { ProductSource } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 
-export type OrderStatus = "pending" | "paid" | "processing" | "completed";
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "processing"
+  | "shipped"
+  | "in_transit"
+  | "delivered"
+  | "completed";
 
-export const ORDER_STATUS_FLOW: OrderStatus[] = ["pending", "paid", "processing", "completed"];
+export const ORDER_STATUS_FLOW: OrderStatus[] = [
+  "pending",
+  "paid",
+  "shipped",
+  "in_transit",
+  "delivered",
+];
+
+export interface ShipmentInfo {
+  easyshipShipmentId?: string | null;
+  trackingNumber?: string | null;
+  labelUrl?: string | null;
+  courierId?: string | null;
+  courierName?: string | null;
+  cost?: number | null;
+  currency?: string | null;
+  createdAt?: string;
+}
 
 export type PaymentMethodId = "cod" | "gcash" | "card";
 
