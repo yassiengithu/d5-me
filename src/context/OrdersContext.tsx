@@ -344,6 +344,45 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const attachShipment = (orderId: string, shipment: ShipmentInfo) => {
+    let notifyTarget: { uid: string | null | undefined } | null = null;
+    setAllOrders((prev) =>
+      prev.map((o) => {
+        if (o.id !== orderId) return o;
+        const merged: ShipmentInfo = {
+          ...(o.shipment ?? {}),
+          ...shipment,
+          createdAt: o.shipment?.createdAt ?? new Date().toISOString(),
+        };
+        const next: PlacedOrder = {
+          ...o,
+          shipment: merged,
+          trackingNumber: merged.trackingNumber ?? o.trackingNumber,
+        };
+        // Auto-advance to "shipped" once we have a tracking number, unless already further.
+        if (
+          merged.trackingNumber &&
+          (next.status === "pending" || next.status === "paid" || next.status === "processing")
+        ) {
+          next.status = "shipped";
+          notifyTarget = { uid: o.userId ?? userId };
+        }
+        return next;
+      }),
+    );
+    if (notifyTarget) {
+      notify(
+        notifyTarget.uid,
+        "Order shipped",
+        `Order ${orderId} has been handed to the courier${
+          shipment.trackingNumber ? ` (tracking ${shipment.trackingNumber})` : ""
+        }.`,
+        `/orders/${encodeURIComponent(orderId)}`,
+        "shipping",
+      );
+    }
+  };
+
   const clearOrders = () => {
     // Only clear orders for the current user (or all legacy ones if signed out).
     setAllOrders((prev) => prev.filter((o) => o.userId && o.userId !== userId));
@@ -357,6 +396,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
         updateOrderStatus,
         updatePaymentStatus,
         updateTrackingNumber,
+        attachShipment,
         setOrderPaymentUrl,
         markOrderPaid,
         markOrderFailed,
