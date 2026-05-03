@@ -279,6 +279,79 @@ const Checkout = () => {
     return false;
   };
 
+  const handleFetchLiveRates = async () => {
+    if (!postalCode.trim() || !city.trim()) {
+      toast.error("Enter destination city and postal code first");
+      return;
+    }
+    setRatesLoading(true);
+    setRatesError(null);
+    try {
+      const rates = await fetchRates({
+        destination: {
+          country_alpha2: "PH",
+          city: city.trim(),
+          postal_code: postalCode.trim(),
+        },
+        parcel: { weight_kg: 1, length_cm: 20, width_cm: 15, height_cm: 10 },
+        declared_value: Math.max(100, Math.round(totalPrice)),
+      });
+      setLiveRates(rates);
+      if (rates.length > 0) {
+        const id = rates[0].courier_id ?? `${rates[0].courier_name}-0`;
+        setSelectedLiveId(id);
+        toast.success(`${rates.length} live rate${rates.length === 1 ? "" : "s"} loaded`);
+      } else {
+        toast.info("No live couriers available — using standard options.");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not fetch live rates";
+      setRatesError(msg);
+      toast.error(msg);
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  const tryCreateShipment = async (orderId: string, dbOrderId: string) => {
+    if (!selectedLiveRate?.courier_id) return; // only when a real Easyship courier is picked
+    try {
+      const created = await createShipment({
+        courierId: selectedLiveRate.courier_id,
+        parcel: { weight_kg: 1, length_cm: 20, width_cm: 15, height_cm: 10 },
+        receiver: {
+          contact_name: name,
+          contact_phone: phone,
+          contact_email: user?.email,
+          line_1: address,
+          country_alpha2: "PH",
+          city: city.trim() || "Manila",
+          postal_code: postalCode.trim() || "1000",
+        },
+        orderId: dbOrderId,
+      });
+      attachShipment(orderId, {
+        easyshipShipmentId: created.easyship_shipment_id ?? null,
+        trackingNumber: created.tracking_number ?? null,
+        labelUrl: created.label_url ?? null,
+        courierId: selectedLiveRate.courier_id,
+        courierName: created.courier_name ?? selectedLiveRate.courier_name,
+        cost: created.cost ?? selectedLiveRate.cost,
+        currency: created.currency ?? selectedLiveRate.currency,
+      });
+      if (created.tracking_number) {
+        toast.success(`Shipment created · ${created.tracking_number}`);
+      } else {
+        toast.success("Shipment created");
+      }
+    } catch (err) {
+      console.warn("auto shipment creation failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not create shipment automatically",
+      );
+    }
+  };
+
   const handlePlaceOrder = () => {
     if (!validate()) {
       toast.error("Please fill in all required fields");
