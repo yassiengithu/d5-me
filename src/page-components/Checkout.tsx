@@ -38,6 +38,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchRates, createShipment, DEFAULT_SENDER_ADDRESS } from "@/lib/easyshipClient";
+import type { CourierRate } from "@/components/CourierSelector";
 
 type CourierId = "jnt" | "ninja" | "flash";
 type Courier = {
@@ -100,7 +102,7 @@ const PAYMENT_METHODS: PaymentMethod[] = [
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, totalPrice, totalItems, clearCart } = useCart();
-  const { addOrder, updatePaymentStatus } = useOrders();
+  const { addOrder, updatePaymentStatus, attachShipment, updateOrderStatus } = useOrders();
   const [confirmed, setConfirmed] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -108,6 +110,17 @@ const Checkout = () => {
   const [phone, setPhone] = useState(() => loadSavedContact().phone);
   const [address, setAddress] = useState(() => loadSavedContact().address);
   const [courierId, setCourierId] = useState<CourierId>("jnt");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  // Live Easyship rates (optional)
+  const [liveRates, setLiveRates] = useState<CourierRate[] | null>(null);
+  const [selectedLiveId, setSelectedLiveId] = useState<string | null>(null);
+  const [ratesLoading, setRatesLoading] = useState(false);
+  const [ratesError, setRatesError] = useState<string | null>(null);
+  const selectedLiveRate =
+    liveRates?.find(
+      (r, i) => (r.courier_id ?? `${r.courier_name}-${i}`) === selectedLiveId,
+    ) ?? null;
   const [paymentId, setPaymentId] = useState<PaymentMethodId>(() => {
     try {
       const saved = localStorage.getItem("shop:lastPaymentMethod") as PaymentMethodId | null;
@@ -231,7 +244,21 @@ const Checkout = () => {
     ? savedAddresses.find((a) => a.id === selectedAddressId) ?? null
     : null;
 
-  const selectedCourier = COURIERS.find((c) => c.id === courierId) ?? COURIERS[0];
+  const baseCourier = COURIERS.find((c) => c.id === courierId) ?? COURIERS[0];
+  // When a live Easyship rate is picked, it takes precedence over the static list.
+  const selectedCourier: Courier = selectedLiveRate
+    ? {
+        id: courierId, // keep enum id for legacy tracking-url helper
+        name: selectedLiveRate.courier_name,
+        fee: Math.round(selectedLiveRate.cost ?? baseCourier.fee),
+        etaDays:
+          selectedLiveRate.min_days && selectedLiveRate.max_days
+            ? `${selectedLiveRate.min_days}–${selectedLiveRate.max_days} days`
+            : baseCourier.etaDays,
+        etaMaxDays: selectedLiveRate.max_days ?? baseCourier.etaMaxDays,
+        badge: "Live",
+      }
+    : baseCourier;
   const selectedPayment = PAYMENT_METHODS.find((p) => p.id === paymentId) ?? PAYMENT_METHODS[0];
   const shippingFee = selectedCourier.fee;
   const grandTotal = totalPrice + shippingFee;
@@ -250,6 +277,79 @@ const Checkout = () => {
     }
     setErrors((result as { ok: false; errors: ContactFieldErrors }).errors);
     return false;
+  };
+
+  const handleFetchLiveRates = async () => {
+    if (!postalCode.trim() || !city.trim()) {
+      toast.error("Enter destination city and postal code first");
+      return;
+    }
+    setRatesLoading(true);
+    setRatesError(null);
+    try {
+      const rates = await fetchRates({
+        destination: {
+          country_alpha2: "PH",
+          city: city.trim(),
+          postal_code: postalCode.trim(),
+        },
+        parcel: { weight_kg: 1, length_cm: 20, width_cm: 15, height_cm: 10 },
+        declared_value: Math.max(100, Math.round(totalPrice)),
+      });
+      setLiveRates(rates);
+      if (rates.length > 0) {
+        const id = rates[0].courier_id ?? `${rates[0].courier_name}-0`;
+        setSelectedLiveId(id);
+        toast.success(`${rates.length} live rate${rates.length === 1 ? "" : "s"} loaded`);
+      } else {
+        toast.info("No live couriers available — using standard options.");
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not fetch live rates";
+      setRatesError(msg);
+      toast.error(msg);
+    } finally {
+      setRatesLoading(false);
+    }
+  };
+
+  const tryCreateShipment = async (orderId: string, dbOrderId: string) => {
+    if (!selectedLiveRate?.courier_id) return; // only when a real Easyship courier is picked
+    try {
+      const created = await createShipment({
+        courierId: selectedLiveRate.courier_id,
+        parcel: { weight_kg: 1, length_cm: 20, width_cm: 15, height_cm: 10 },
+        receiver: {
+          contact_name: name,
+          contact_phone: phone,
+          contact_email: user?.email,
+          line_1: address,
+          country_alpha2: "PH",
+          city: city.trim() || "Manila",
+          postal_code: postalCode.trim() || "1000",
+        },
+        orderId: dbOrderId,
+      });
+      attachShipment(orderId, {
+        easyshipShipmentId: created.easyship_shipment_id ?? null,
+        trackingNumber: created.tracking_number ?? null,
+        labelUrl: created.label_url ?? null,
+        courierId: selectedLiveRate.courier_id,
+        courierName: created.courier_name ?? selectedLiveRate.courier_name,
+        cost: created.cost ?? selectedLiveRate.cost,
+        currency: created.currency ?? selectedLiveRate.currency,
+      });
+      if (created.tracking_number) {
+        toast.success(`Shipment created · ${created.tracking_number}`);
+      } else {
+        toast.success("Shipment created");
+      }
+    } catch (err) {
+      console.warn("auto shipment creation failed", err);
+      toast.error(
+        err instanceof Error ? err.message : "Could not create shipment automatically",
+      );
+    }
   };
 
   const handlePlaceOrder = () => {
@@ -383,6 +483,8 @@ const Checkout = () => {
     setConfirmed(true);
     clearCart();
     setProcessing(false);
+    // Fire-and-forget shipment creation when a live courier was picked.
+    void tryCreateShipment(orderId, dbOrderId);
   };
 
   if (confirmed && placedOrder) {
@@ -997,6 +1099,91 @@ const Checkout = () => {
             <Truck className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground">Choose Courier</h2>
           </div>
+
+          {/* Live Easyship rates */}
+          <div className="rounded-xl bg-card shadow-card p-3 mb-2.5 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Destination city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="h-10 text-sm"
+                maxLength={120}
+              />
+              <Input
+                placeholder="Postal code"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="h-10 text-sm"
+                maxLength={20}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFetchLiveRates}
+              disabled={ratesLoading}
+              className="w-full h-10 rounded-lg text-xs font-bold"
+            >
+              {ratesLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  Calculating live rates…
+                </>
+              ) : (
+                <>
+                  <Truck className="h-3.5 w-3.5 mr-1.5" />
+                  Calculate live shipping rates
+                </>
+              )}
+            </Button>
+            {ratesError && (
+              <p className="text-[11px] text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> {ratesError}
+              </p>
+            )}
+            {liveRates && liveRates.length > 0 && (
+              <RadioGroup
+                value={selectedLiveId ?? ""}
+                onValueChange={(v) => setSelectedLiveId(v)}
+                className="space-y-1.5 pt-1"
+              >
+                {liveRates.map((r, idx) => {
+                  const id = r.courier_id ?? `${r.courier_name}-${idx}`;
+                  const active = selectedLiveId === id;
+                  return (
+                    <Label
+                      key={id}
+                      htmlFor={`live-${id}`}
+                      className={`flex items-center gap-2 rounded-lg border p-2 cursor-pointer ${
+                        active ? "border-primary bg-primary/5" : "border-border"
+                      }`}
+                    >
+                      <RadioGroupItem id={`live-${id}`} value={id} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">
+                          {r.courier_name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {r.min_days && r.max_days
+                            ? `${r.min_days}–${r.max_days} days`
+                            : "ETA varies"}
+                        </p>
+                      </div>
+                      <p className="text-xs font-bold text-primary tabular-nums">
+                        ₱{Math.round(r.cost ?? 0)}
+                      </p>
+                    </Label>
+                  );
+                })}
+              </RadioGroup>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+              Live rates are powered by Easyship — picking one auto-creates a real shipment with tracking after you place the order.
+            </p>
+          </div>
+
           <RadioGroup
             value={courierId}
             onValueChange={(v) => setCourierId(v as CourierId)}

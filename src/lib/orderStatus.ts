@@ -1,35 +1,32 @@
-import { CheckCircle, Clock, Loader2, Wallet, type LucideIcon } from "lucide-react";
+import { CheckCircle, Clock, Loader2, Wallet, Truck, Navigation, type LucideIcon } from "lucide-react";
 import type { OrderStatus } from "@/context/OrdersContext";
 
 export interface OrderStatusVisual {
   label: string;
   shortLabel: string;
   icon: LucideIcon;
-  /** Whether the icon should spin (e.g. processing). */
   animate?: boolean;
-  /** Whether to add a soft pulse animation (e.g. pending payment). */
   pulse?: boolean;
-  /** Tailwind classes for filled badge (bg + text). */
   badge: string;
-  /** Solid dot color. */
   dot: string;
-  /** Solid bar color (for left edge accents / progress fills). */
   bar: string;
-  /** Text color in standalone usage. */
   text: string;
-  /** Outlined chip / hero card background + border + text. */
   surface: string;
-  /** Tailwind ring class for the active step indicator (full literal so JIT picks it up). */
   ring: string;
-  /** Short headline shown as the main status message (e.g. "Waiting for payment"). */
   headline: string;
-  /** Supporting tagline shown beneath the headline. */
   tagline: string;
-  /** One-line description used on the order detail hero (kept for backwards compat). */
   description: string;
 }
 
-export const ORDER_STATUS_FLOW: OrderStatus[] = ["pending", "paid", "processing", "completed"];
+// Shipping-aware flow: Pending → Paid → Shipped → In Transit → Delivered.
+// `processing` / `completed` are kept as legacy aliases (see normalizer in OrdersContext).
+export const ORDER_STATUS_FLOW: OrderStatus[] = [
+  "pending",
+  "paid",
+  "shipped",
+  "in_transit",
+  "delivered",
+];
 
 export const ORDER_STATUS_VISUALS: Record<OrderStatus, OrderStatusVisual> = {
   pending: {
@@ -75,6 +72,49 @@ export const ORDER_STATUS_VISUALS: Record<OrderStatus, OrderStatusVisual> = {
     headline: "Preparing your order",
     tagline: "Your items are being packed and handed to the courier.",
     description: "Your order is being packed and shipped.",
+  },
+  shipped: {
+    label: "Shipped",
+    shortLabel: "Shipped",
+    icon: Truck,
+    badge: "bg-primary/15 text-primary",
+    dot: "bg-primary",
+    bar: "bg-primary",
+    text: "text-primary",
+    surface: "bg-primary/10 text-primary border-primary/30",
+    ring: "ring-primary/30",
+    headline: "Shipped",
+    tagline: "Your parcel has been handed to the courier.",
+    description: "Your order has shipped.",
+  },
+  in_transit: {
+    label: "In Transit",
+    shortLabel: "In Transit",
+    icon: Navigation,
+    pulse: true,
+    badge: "bg-info/15 text-info",
+    dot: "bg-info",
+    bar: "bg-info",
+    text: "text-info",
+    surface: "bg-info/10 text-info border-info/30",
+    ring: "ring-info/30",
+    headline: "On its way",
+    tagline: "Your parcel is moving toward the destination.",
+    description: "Your order is in transit.",
+  },
+  delivered: {
+    label: "Delivered",
+    shortLabel: "Delivered",
+    icon: CheckCircle,
+    badge: "bg-success/15 text-success",
+    dot: "bg-success",
+    bar: "bg-success",
+    text: "text-success",
+    surface: "bg-success/10 text-success border-success/30",
+    ring: "ring-success/30",
+    headline: "Delivered",
+    tagline: "Enjoy your order — thanks for shopping!",
+    description: "Your order has been delivered.",
   },
   completed: {
     label: "Completed",

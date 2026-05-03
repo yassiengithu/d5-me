@@ -745,6 +745,35 @@ const OrderDetail = () => {
               )}
             </div>
           )}
+
+          {order.shipment && (order.shipment.trackingNumber || order.shipment.labelUrl) && (
+            <div className="rounded-xl bg-success/10 border border-success/30 px-3 py-2.5 space-y-2">
+              <div className="flex items-center gap-2">
+                <BadgeCheck className="h-4 w-4 text-success shrink-0" />
+                <p className="text-xs font-bold text-success">
+                  Shipment created with {order.shipment.courierName ?? "courier"}
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                {order.shipment.trackingNumber && (
+                  <Button asChild size="sm" variant="outline" className="h-9 rounded-lg text-xs font-bold gap-1.5 flex-1">
+                    <Link to={`/track/${encodeURIComponent(order.shipment.trackingNumber)}`}>
+                      <Navigation className="h-3.5 w-3.5" />
+                      Live tracking
+                    </Link>
+                  </Button>
+                )}
+                {order.shipment.labelUrl && (
+                  <Button asChild size="sm" variant="outline" className="h-9 rounded-lg text-xs font-bold gap-1.5 flex-1">
+                    <a href={order.shipment.labelUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Download label
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </Card>
 
         {/* Payment status — prominent card */}

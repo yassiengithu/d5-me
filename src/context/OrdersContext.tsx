@@ -2,9 +2,33 @@ import { createContext, useContext, useEffect, useMemo, useState, ReactNode } fr
 import type { ProductSource } from "@/data/products";
 import { supabase } from "@/integrations/supabase/client";
 
-export type OrderStatus = "pending" | "paid" | "processing" | "completed";
+export type OrderStatus =
+  | "pending"
+  | "paid"
+  | "processing"
+  | "shipped"
+  | "in_transit"
+  | "delivered"
+  | "completed";
 
-export const ORDER_STATUS_FLOW: OrderStatus[] = ["pending", "paid", "processing", "completed"];
+export const ORDER_STATUS_FLOW: OrderStatus[] = [
+  "pending",
+  "paid",
+  "shipped",
+  "in_transit",
+  "delivered",
+];
+
+export interface ShipmentInfo {
+  easyshipShipmentId?: string | null;
+  trackingNumber?: string | null;
+  labelUrl?: string | null;
+  courierId?: string | null;
+  courierName?: string | null;
+  cost?: number | null;
+  currency?: string | null;
+  createdAt?: string;
+}
 
 export type PaymentMethodId = "cod" | "gcash" | "card";
 
@@ -74,6 +98,7 @@ export interface PlacedOrder {
     etaMaxDays: number;
   };
   payment?: PaymentMethodInfo;
+  shipment?: ShipmentInfo;
 }
 
 interface OrdersContextType {
@@ -82,6 +107,7 @@ interface OrdersContextType {
   updateOrderStatus: (orderId: string, status: OrderStatus) => void;
   updatePaymentStatus: (orderId: string, status: PaymentStatus) => void;
   updateTrackingNumber: (orderId: string, trackingNumber: string) => void;
+  attachShipment: (orderId: string, shipment: ShipmentInfo) => void;
   /**
    * Attach (or replace) the provider-generated payment URL for an order.
    * Called after `paymentGateway.createPaymentUrl()` resolves.
@@ -109,14 +135,13 @@ const STORAGE_KEY = "shop:orders";
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
 const normalizeOrderStatus = (status: unknown): OrderStatus => {
-  // New canonical values
   if (status === "completed") return "completed";
+  if (status === "delivered") return "delivered";
+  if (status === "in_transit") return "in_transit";
+  if (status === "shipped") return "shipped";
   if (status === "processing") return "processing";
   if (status === "paid") return "paid";
   if (status === "pending") return "pending";
-  // Legacy values from previous shipping-based flow
-  if (status === "delivered") return "completed";
-  if (status === "shipped" || status === "in_transit") return "processing";
   if (status === "preparing") return "pending";
   return "pending";
 };
@@ -319,6 +344,45 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
     );
   };
 
+  const attachShipment = (orderId: string, shipment: ShipmentInfo) => {
+    let notifyTarget: { uid: string | null | undefined } | null = null;
+    setAllOrders((prev) =>
+      prev.map((o) => {
+        if (o.id !== orderId) return o;
+        const merged: ShipmentInfo = {
+          ...(o.shipment ?? {}),
+          ...shipment,
+          createdAt: o.shipment?.createdAt ?? new Date().toISOString(),
+        };
+        const next: PlacedOrder = {
+          ...o,
+          shipment: merged,
+          trackingNumber: merged.trackingNumber ?? o.trackingNumber,
+        };
+        // Auto-advance to "shipped" once we have a tracking number, unless already further.
+        if (
+          merged.trackingNumber &&
+          (next.status === "pending" || next.status === "paid" || next.status === "processing")
+        ) {
+          next.status = "shipped";
+          notifyTarget = { uid: o.userId ?? userId };
+        }
+        return next;
+      }),
+    );
+    if (notifyTarget) {
+      notify(
+        notifyTarget.uid,
+        "Order shipped",
+        `Order ${orderId} has been handed to the courier${
+          shipment.trackingNumber ? ` (tracking ${shipment.trackingNumber})` : ""
+        }.`,
+        `/orders/${encodeURIComponent(orderId)}`,
+        "shipping",
+      );
+    }
+  };
+
   const clearOrders = () => {
     // Only clear orders for the current user (or all legacy ones if signed out).
     setAllOrders((prev) => prev.filter((o) => o.userId && o.userId !== userId));
@@ -332,6 +396,7 @@ export const OrdersProvider = ({ children }: { children: ReactNode }) => {
         updateOrderStatus,
         updatePaymentStatus,
         updateTrackingNumber,
+        attachShipment,
         setOrderPaymentUrl,
         markOrderPaid,
         markOrderFailed,
