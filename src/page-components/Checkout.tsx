@@ -38,6 +38,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchRates, createShipment, DEFAULT_SENDER_ADDRESS } from "@/lib/easyshipClient";
+import type { CourierRate } from "@/components/CourierSelector";
 
 type CourierId = "jnt" | "ninja" | "flash";
 type Courier = {
