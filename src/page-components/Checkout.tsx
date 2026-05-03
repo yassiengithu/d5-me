@@ -1099,6 +1099,91 @@ const Checkout = () => {
             <Truck className="h-4 w-4 text-primary" />
             <h2 className="text-sm font-bold text-foreground">Choose Courier</h2>
           </div>
+
+          {/* Live Easyship rates */}
+          <div className="rounded-xl bg-card shadow-card p-3 mb-2.5 space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                placeholder="Destination city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="h-10 text-sm"
+                maxLength={120}
+              />
+              <Input
+                placeholder="Postal code"
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                className="h-10 text-sm"
+                maxLength={20}
+              />
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleFetchLiveRates}
+              disabled={ratesLoading}
+              className="w-full h-10 rounded-lg text-xs font-bold"
+            >
+              {ratesLoading ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  Calculating live rates…
+                </>
+              ) : (
+                <>
+                  <Truck className="h-3.5 w-3.5 mr-1.5" />
+                  Calculate live shipping rates
+                </>
+              )}
+            </Button>
+            {ratesError && (
+              <p className="text-[11px] text-destructive flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> {ratesError}
+              </p>
+            )}
+            {liveRates && liveRates.length > 0 && (
+              <RadioGroup
+                value={selectedLiveId ?? ""}
+                onValueChange={(v) => setSelectedLiveId(v)}
+                className="space-y-1.5 pt-1"
+              >
+                {liveRates.map((r, idx) => {
+                  const id = r.courier_id ?? `${r.courier_name}-${idx}`;
+                  const active = selectedLiveId === id;
+                  return (
+                    <Label
+                      key={id}
+                      htmlFor={`live-${id}`}
+                      className={`flex items-center gap-2 rounded-lg border p-2 cursor-pointer ${
+                        active ? "border-primary bg-primary/5" : "border-border"
+                      }`}
+                    >
+                      <RadioGroupItem id={`live-${id}`} value={id} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-foreground truncate">
+                          {r.courier_name}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {r.min_days && r.max_days
+                            ? `${r.min_days}–${r.max_days} days`
+                            : "ETA varies"}
+                        </p>
+                      </div>
+                      <p className="text-xs font-bold text-primary tabular-nums">
+                        ₱{Math.round(r.cost ?? 0)}
+                      </p>
+                    </Label>
+                  );
+                })}
+              </RadioGroup>
+            )}
+            <p className="text-[10px] text-muted-foreground">
+              Live rates are powered by Easyship — picking one auto-creates a real shipment with tracking after you place the order.
+            </p>
+          </div>
+
           <RadioGroup
             value={courierId}
             onValueChange={(v) => setCourierId(v as CourierId)}
