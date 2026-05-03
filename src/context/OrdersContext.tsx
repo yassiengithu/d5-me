@@ -135,14 +135,13 @@ const STORAGE_KEY = "shop:orders";
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
 const normalizeOrderStatus = (status: unknown): OrderStatus => {
-  // New canonical values
   if (status === "completed") return "completed";
+  if (status === "delivered") return "delivered";
+  if (status === "in_transit") return "in_transit";
+  if (status === "shipped") return "shipped";
   if (status === "processing") return "processing";
   if (status === "paid") return "paid";
   if (status === "pending") return "pending";
-  // Legacy values from previous shipping-based flow
-  if (status === "delivered") return "completed";
-  if (status === "shipped" || status === "in_transit") return "processing";
   if (status === "preparing") return "pending";
   return "pending";
 };
